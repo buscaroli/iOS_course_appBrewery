@@ -14,11 +14,9 @@ class ChatViewController: UIViewController {
     @IBOutlet weak var tableView: UITableView!
     @IBOutlet weak var messageTextfield: UITextField!
     
-    var messages: [Message] = [
-        Message(sender: "matt", body: "Hi there"),
-        Message(sender: "mel", body: "hello!"),
-        Message(sender: "matt", body: "What are you up to nowadays?")
-    ]
+    let db = Firestore.firestore()
+    
+    var messages: [Message] = []
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -30,9 +28,52 @@ class ChatViewController: UIViewController {
         
         // registering the xib file for the MessageCell
         tableView.register(UINib(nibName: K.cellNibName, bundle: nil), forCellReuseIdentifier: K.cellIdentifier)
+    
+        loadMessages()
+    }
+    
+    func loadMessages() {
+        
+        
+        db.collection(K.FStore.collectionName)
+            .order(by: K.FStore.dateField)
+            .addSnapshotListener { querySnapshot, error in
+                
+                self.messages = []
+                
+                if let error = error {
+                    print("Error retrieving data from Firestore: \(error.localizedDescription)")
+                } else {
+                    if let snapshotDocuments = querySnapshot?.documents {
+                        for document in snapshotDocuments {
+                            let data = document.data()
+                            if let messageSender = data[K.FStore.senderField] as? String, let messageBody = data[K.FStore.bodyField] as? String {
+                                self.messages.append(Message(sender: messageSender, body: messageBody))
+                                
+                                DispatchQueue.main.async {
+                                    self.tableView.reloadData()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
     }
     
     @IBAction func sendPressed(_ sender: UIButton) {
+        if let messageBody = messageTextfield.text, let messageSender = Auth.auth().currentUser?.email {
+            db.collection(K.FStore.collectionName).addDocument(data: [
+                                                                K.FStore.senderField: messageSender,
+                K.FStore.bodyField: messageBody,
+                K.FStore.dateField: Date().timeIntervalSince1970
+            ]) { error in
+                if let error = error {
+                    print("Error saving data to Firestore: \(error.localizedDescription)")
+                } else {
+                    print("Data saved successfully")
+                }
+            }
+        }
     }
     
     @IBAction func logOutPressed(_ sender: UIBarButtonItem) {
