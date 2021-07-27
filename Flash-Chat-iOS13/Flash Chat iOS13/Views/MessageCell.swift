@@ -13,6 +13,7 @@ class MessageCell: UITableViewCell {
     @IBOutlet weak var messageBubble: UIView!
     @IBOutlet weak var label: UILabel!
     @IBOutlet weak var rightImageView: UIImageView!
+    @IBOutlet weak var leftImageView: UIImageView!
     
     // nib is an old name for xib
     // this function is going to initialize the xib file
